@@ -4,12 +4,10 @@ import (
 	"encoding/csv"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
-)
-
-const (
-	layout = "2006-01-02 15:04:05"
 )
 
 type TimeLocation struct {
@@ -39,12 +37,16 @@ func ReadCSV(f string) ([]TimeLocation, error) {
 		timeLocations = append(timeLocations, tl)
 	}
 
+	sort.SliceStable(timeLocations, func(i, j int) bool {
+		return timeLocations[j].DateTime.After(timeLocations[i].DateTime)
+	})
+
 	return timeLocations, nil
 }
 
 func convertTimeLocation(tloc []string) (TimeLocation, error) {
 	var tl TimeLocation
-	dt, tErr := time.Parse(layout, tloc[0])
+	dt, tErr := parseTime(tloc[0])
 	if tErr != nil {
 		return tl, tErr
 	}
@@ -66,4 +68,13 @@ func convertTimeLocation(tloc []string) (TimeLocation, error) {
 	}
 
 	return tl, nil
+}
+
+func parseTime(dtStr string) (time.Time, error) {
+	layout := "2006-01-02 15:04:05"
+	if strings.Contains(dtStr, "T") && strings.Contains(dtStr, "Z") {
+		layout = "2006-01-02T15:04:05Z"
+	}
+
+	return time.Parse(layout, dtStr)
 }
