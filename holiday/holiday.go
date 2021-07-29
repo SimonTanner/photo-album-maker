@@ -29,7 +29,40 @@ func (h *Holiday) GetAbout() error {
 }
 
 func (d *Day) setDayTitle() {
-	d.Title = fmt.Sprintf("Day %d, %d places visited %d areas: %s", d.DayNum, len(d.Places), len(d.Areas), strings.Join(d.Areas, ", "))
+	if len(d.Areas) > 3 {
+		d.Title = fmt.Sprintf("Day %d, %d photos in %d areas: %s. What a busy day!", d.DayNum, len(d.Photos), len(d.Areas), strings.Join(d.Areas, ", "))
+	} else if len(d.Areas) > 1 && len(d.Areas) <= 3 {
+		d.Title = fmt.Sprintf("Day %d, %d photos in %d areas: %s", d.DayNum, len(d.Photos), len(d.Areas), strings.Join(d.Areas, ", "))
+	} else {
+		d.Title = fmt.Sprintf("Day %d, %d photos in %s", d.DayNum, len(d.Photos), d.Areas[0])
+	}
+}
+
+func (h *Holiday) GetAreaInfo() {
+	var updatedDays []Day
+	for _, day := range h.Days {
+		updatedDays = append(updatedDays, day.getAreaInfoByDay(h.Country))
+	}
+	h.Days = updatedDays
+}
+
+func (d *Day) getAreaInfoByDay(country string) Day {
+	var aboutAreas []AboutArea
+	for _, area := range d.Areas {
+		queryStr := fmt.Sprintf("%s, %s", area, country)
+		areaInf, err := client.GetPlaceInfo(queryStr)
+		if err != nil {
+			continue
+		}
+		about := AboutArea{
+			Description: areaInf.Data[0].ResultObject.GeoDescription,
+			Attractions: areaInf.Data[0].ResultObject.CategoryCounts.Attractions,
+		}
+		aboutAreas = append(aboutAreas, about)
+	}
+	d.AboutAreas = aboutAreas
+
+	return *d
 }
 
 func (h *Holiday) SetDayPlaceData(tlocs []reader.TimeLocation) {
@@ -38,7 +71,7 @@ func (h *Holiday) SetDayPlaceData(tlocs []reader.TimeLocation) {
 	day1 := tlocs[0].DateTime
 	cities := make(map[string]bool)
 	for date, locs := range tlocByDay {
-		var places []Place
+		var photos []Photo
 		areas := make(map[string]bool)
 		for _, loc := range locs {
 			locInfo, _ := getLocationData(loc)
@@ -48,7 +81,7 @@ func (h *Holiday) SetDayPlaceData(tlocs []reader.TimeLocation) {
 			city := locInfo.GetCity()
 			cities[city] = true
 
-			places = append(places, Place{
+			photos = append(photos, Photo{
 				DateTime:  loc.DateTime,
 				Lattitude: loc.Lattitude,
 				Longitude: loc.Longitude,
@@ -57,9 +90,7 @@ func (h *Holiday) SetDayPlaceData(tlocs []reader.TimeLocation) {
 				Title:     locInfo.FormattedAdress,
 			})
 		}
-		// fmt.Println(fmt.Sprintf("%+v", places))
 
-		// fmt.Println(getDayNum(day1, locs[0].DateTime))
 		var areaNames []string
 		for area := range areas {
 			if area != "" {
@@ -68,20 +99,19 @@ func (h *Holiday) SetDayPlaceData(tlocs []reader.TimeLocation) {
 		}
 
 		day := Day{
-			Day:             date,
-			DayNum:          getDayNum(day1, locs[0].DateTime),
-			Places:          places,
-			NumPlacesVisted: len(places),
-			Areas:           areaNames,
+			Day:            date,
+			DayNum:         getDayNum(day1, locs[0].DateTime),
+			Photos:         photos,
+			NumPhotosTaken: len(photos),
+			Areas:          areaNames,
 		}
 
 		day.setDayTitle()
 		fmt.Println(day.Title)
 		days = append(days, day)
 	}
-	// fmt.Println(fmt.Sprintf("%+v", days))
 	h.Days = days
-	h.Country = days[0].Places[0].Location.GetCountry()
+	h.Country = days[0].Photos[0].Location.GetCountry()
 	h.Cities = getCities(cities)
 	h.Duration = len(days)
 }
@@ -110,7 +140,6 @@ func getPlacesByDays(tlocs []reader.TimeLocation) map[string][]reader.TimeLocati
 			tlocByDay[dateStr] = []reader.TimeLocation{tloc}
 		}
 	}
-	// fmt.Println(tlocByDay)
 	return tlocByDay
 }
 

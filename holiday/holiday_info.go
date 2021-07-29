@@ -6,7 +6,7 @@ import (
 	"github.com/SimonTanner/photo-album-maker/client"
 )
 
-type Place struct {
+type Photo struct {
 	Location  client.LocationResult `json:"-"`
 	DateTime  time.Time             `json:"date_time"`
 	Lattitude float64
@@ -16,13 +16,25 @@ type Place struct {
 	Area      string `json:"area"`
 }
 
+type AboutArea struct {
+	Description string
+	Attractions struct {
+		Activities  string `json:"activities"`
+		Attractions string `json:"attractions"`
+		Nightlife   string `json:"nightlife"`
+		Shopping    string `json:"shopping"`
+		Total       string `json:"total"`
+	} `json:"attractions"`
+}
+
 type Day struct {
-	Day             string   `json:"day"`
-	DayNum          int      `json:"day_num"`
-	NumPlacesVisted int      `json:"no_places_visited"`
-	Places          []Place  `json:"places"`
-	Title           string   `json:"title"`
-	Areas           []string `json:"areas"`
+	Day            string      `json:"day"`
+	DayNum         int         `json:"day_num"`
+	NumPhotosTaken int         `json:"no_photos_taken"`
+	Photos         []Photo     `json:"photos"`
+	Title          string      `json:"title"`
+	Areas          []string    `json:"areas"`
+	AboutAreas     []AboutArea `json:"about_areas"`
 }
 
 type Holiday struct {
